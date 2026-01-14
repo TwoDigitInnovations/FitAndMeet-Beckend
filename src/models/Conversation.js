@@ -23,10 +23,12 @@ conversationSchema.pre('save', function(next) {
   if (this.participants.length !== 2) {
     return next(new Error('Conversation must have exactly 2 participants'));
   }
+  // Sort participants to ensure consistent ordering for uniqueness
+  this.participants.sort();
   next();
 });
 
-// Create unique index for participants
-conversationSchema.index({ participants: 1 }, { unique: true });
+// Remove the old index and use a virtual field approach
+// No index here - we'll handle uniqueness in the application logic
 
 module.exports = mongoose.model('Conversation', conversationSchema);

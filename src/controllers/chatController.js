@@ -179,8 +179,10 @@ const sendMessage = async (req, res) => {
       });
 
       if (!conversation) {
+        // Sort participants to ensure consistent ordering
+        const sortedParticipants = [senderId, recipientId].sort();
         conversation = new Conversation({
-          participants: [senderId, recipientId]
+          participants: sortedParticipants
         });
         await conversation.save();
       }
@@ -263,8 +265,10 @@ const sendMediaMessage = async (req, res) => {
       });
 
       if (!conversation) {
+        // Sort participants to ensure consistent ordering
+        const sortedParticipants = [senderId, recipientId].sort();
         conversation = new Conversation({
-          participants: [senderId, recipientId]
+          participants: sortedParticipants
         });
         await conversation.save();
       }
