@@ -221,6 +221,8 @@ const sendMessage = async (req, res) => {
     const messageWithSender = await Message.findById(message._id)
       .populate('sender', 'firstName photos');
 
+    console.log('Sending message response with sender:', JSON.stringify(messageWithSender, null, 2));
+
     // Emit socket event (handled by socket middleware)
     if (req.io) {
       req.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
