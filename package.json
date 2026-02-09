@@ -7,7 +7,7 @@
     "start": "pm2 start server.js -i max -f  --name 'fitandmeet-api'",
     "kill": "pm2 kill fitandmeet-api",
     "logs": "pm2 log fitandmeet-api",
-    "restart": "pm2 restart fitandmeet-api",
+    "restart": "pm2 restart fitandmeet-api"
   },
   "author": "",
   "license": "ISC",
