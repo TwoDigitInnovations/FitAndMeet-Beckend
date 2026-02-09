@@ -9,9 +9,9 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "engines": {
-    "node": "18.x"
-  },
+ "engines": {
+  "node": ">=20"
+},
   "devDependencies": {
     "cross-env": "^7.0.3",
     "eslint": "^8.57.1",
