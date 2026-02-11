@@ -234,7 +234,28 @@ exports.verifyOTP = async (req, res) => {
     console.log('Profile completed:', user.profileCompleted);
     console.log('Current step:', user.currentStep);
     
-    if (user.profileCompleted) {
+    // Check if profile is actually complete based on currentStep
+    // If currentStep is 9 or higher and all required fields exist, consider it complete
+    const hasAllRequiredFields = user.gymName && user.termsAccepted && 
+                                  user.idDocument?.url && user.gymMembershipDocument?.url &&
+                                  user.firstName && user.birthday && user.gender &&
+                                  user.interestedIn && user.lookingFor && user.ageRange &&
+                                  user.interests?.length > 0 && user.bio && user.photos?.length > 0;
+    
+    const isActuallyComplete = user.profileCompleted || (user.currentStep >= 9 && hasAllRequiredFields);
+    
+    console.log('Has all required fields:', hasAllRequiredFields);
+    console.log('Is actually complete:', isActuallyComplete);
+    
+    if (isActuallyComplete) {
+      // Update profileCompleted flag if not already set
+      if (!user.profileCompleted && hasAllRequiredFields) {
+        user.profileCompleted = true;
+        user.currentStep = 11;
+        await user.save();
+        console.log('Updated user profileCompleted flag to true');
+      }
+      
       nextScreen = 'Home'; // Completed users go to home
       progressPercent = 100;
       stepDescription = 'Profile completed';
@@ -277,13 +298,13 @@ exports.verifyOTP = async (req, res) => {
         id: user._id,
         phoneNumber: user.phoneNumber,
         currentStep: user.currentStep,
-        profileCompleted: user.profileCompleted,
+        profileCompleted: isActuallyComplete,
         firstName: user.firstName,
         gymName: user.gymName,
         termsAccepted: user.termsAccepted,
       },
       nextScreen,
-      requiresRegistration: !user.profileCompleted,
+      requiresRegistration: !isActuallyComplete,
       progressPercent,
       stepDescription
     };

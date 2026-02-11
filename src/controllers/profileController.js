@@ -217,7 +217,8 @@ exports.updateProfile = async (req, res) => {
       'interests',
       'bio',
       'gymName',
-      'gymLocation'
+      'gymLocation',
+      'photos'
     ];
 
     // Filter only allowed fields
