@@ -71,10 +71,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['Long-term Partner', 'Work out Partner', 'Looking for Both'],
     },
-    ageRange: {
+    ageRange: [{
       type: String,
       enum: ['18-25', '25-35', '35-45', '45-Over'],
-    },
+    }],
     interests: [{
       type: String,
     }],

@@ -1,7 +1,7 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
-const upload = require('../middlewares/upload'); // Use Cloudinary upload middleware
+const upload = require('../middlewares/upload'); 
 
 const getConversations = async (req, res) => {
   try {
