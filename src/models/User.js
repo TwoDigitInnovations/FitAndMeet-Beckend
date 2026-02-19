@@ -97,6 +97,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    oneSignalPlayerId: {
+      type: String,
+      default: null,
+    },
     profileImage: {
       type: String,
       get: function() {

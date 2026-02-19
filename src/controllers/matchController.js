@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Match = require('../models/Match');
 const { createNotification } = require('./notificationController');
+const { sendLikeNotification, sendMatchNotification } = require('../services/oneSignalService');
 
 exports.getPotentialMatches = async (req, res) => {
   try {
@@ -168,7 +169,6 @@ exports.likeProfile = async (req, res) => {
     // Create notification for the liked user
     try {
       if (isMatch) {
-        // Create match notification for both users
         await createNotification(
           likedUserId,
           currentUserId,
@@ -183,8 +183,14 @@ exports.likeProfile = async (req, res) => {
           `You matched with ${matchedUserDetails.firstName}!`,
           { matchId: mutualLike._id }
         );
+
+        if (matchedUserDetails.oneSignalPlayerId) {
+          await sendMatchNotification(matchedUserDetails.oneSignalPlayerId, currentUser.firstName);
+        }
+        if (currentUser.oneSignalPlayerId) {
+          await sendMatchNotification(currentUser.oneSignalPlayerId, matchedUserDetails.firstName);
+        }
       } else {
-        // Create like notification only for the liked user
         await createNotification(
           likedUserId,
           currentUserId,
@@ -192,10 +198,13 @@ exports.likeProfile = async (req, res) => {
           `${currentUser.firstName} liked your profile!`,
           {}
         );
+
+        if (matchedUserDetails.oneSignalPlayerId) {
+          await sendLikeNotification(matchedUserDetails.oneSignalPlayerId, currentUser.firstName);
+        }
       }
     } catch (notifError) {
       console.error('Error creating notification:', notifError);
-      // Don't fail the like/match if notification fails
     }
 
     console.log('Sending response:', { isMatch, currentUser: currentUser?.firstName, matchedUser: matchedUserDetails?.firstName });
@@ -336,6 +345,86 @@ exports.getLikedProfiles = async (req, res) => {
       success: false,
       message: 'Failed to get liked profiles',
       error: error.message
+    });
+  }
+};
+
+
+exports.getFilteredProfiles = async (req, res) => {
+  try {
+    const currentUserId = req.userId;
+    const { filter } = req.query;
+    
+    const currentUser = await User.findById(currentUserId);
+    
+    if (!currentUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    const likedUserIds = await Match.find({
+      user1: currentUserId,
+      status: { $in: ['liked', 'matched'] }
+    }).distinct('user2');
+
+    let query = {
+      _id: { $nin: [...likedUserIds, currentUserId] },
+      profileCompleted: true,
+      isActive: true,
+      isBlocked: false,
+      gender: currentUser.interestedIn === 'Every one' ? { $exists: true } : currentUser.interestedIn,
+      photos: { $exists: true, $not: { $size: 0 } }
+    };
+
+    if (filter === 'online') {
+      query.isOnline = true;
+    } else if (filter === 'new') {
+      const sevenWeeksAgo = new Date();
+      sevenWeeksAgo.setDate(sevenWeeksAgo.getDate() - 49);
+      query.createdAt = { $gte: sevenWeeksAgo };
+    }
+
+    const profiles = await User.find(query)
+      .select('firstName age gender gymName photos interests birthday isOnline createdAt')
+      .sort(filter === 'new' ? { createdAt: -1 } : {})
+      .limit(20);
+
+    const processedProfiles = profiles.map(profile => {
+      let calculatedAge = profile.age;
+      if (profile.birthday && !calculatedAge) {
+        const birthDate = new Date(profile.birthday);
+        const today = new Date();
+        calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          calculatedAge--;
+        }
+      }
+
+      const daysSinceJoined = Math.floor((Date.now() - new Date(profile.createdAt)) / (1000 * 60 * 60 * 24));
+      const timeLeft = daysSinceJoined < 7 ? `${daysSinceJoined}d left` : '';
+
+      return {
+        id: profile._id,
+        name: profile.firstName,
+        age: calculatedAge || 25,
+        image: profile.photos && profile.photos.length > 0 ? profile.photos[0].url : null,
+        isVerified: true,
+        timeLeft: timeLeft
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      profiles: processedProfiles
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to get filtered profiles', 
+      error: error.message 
     });
   }
 };

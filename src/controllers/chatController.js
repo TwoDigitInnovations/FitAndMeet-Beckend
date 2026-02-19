@@ -1,7 +1,8 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
-const upload = require('../middlewares/upload'); 
+const upload = require('../middlewares/upload');
+const { sendMessageNotification } = require('../services/oneSignalService'); 
 
 const getConversations = async (req, res) => {
   try {
@@ -187,7 +188,15 @@ const sendMessage = async (req, res) => {
 
     console.log('Sending message response with sender:', JSON.stringify(messageWithSender, null, 2));
 
-    // Emit socket event (handled by socket middleware)
+    const recipientUser = await User.findById(recipient);
+    if (recipientUser?.oneSignalPlayerId) {
+      await sendMessageNotification(
+        recipientUser.oneSignalPlayerId,
+        messageWithSender.sender.firstName,
+        content
+      );
+    }
+
     if (req.io) {
       req.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
     }
@@ -205,7 +214,7 @@ const sendMessage = async (req, res) => {
   }
 };
 
-// Send media message (image, video, audio, file)
+
 const sendMediaMessage = async (req, res) => {
   try {
     const { conversationId, recipientId, type } = req.body;
@@ -347,7 +356,7 @@ const markAsRead = async (req, res) => {
   }
 };
 
-// Delete a message
+
 const deleteMessage = async (req, res) => {
   try {
     const { messageId } = req.params;

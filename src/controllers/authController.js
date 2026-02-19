@@ -159,7 +159,7 @@ exports.sendOTP = async (req, res) => {
     console.error('=== SEND OTP ERROR ===');
     console.error('Error details:', error);
     
-    // Handle duplicate key error
+    
     if (error.code === 11000 && error.keyPattern?.phoneNumber) {
       return res.status(400).json({ 
         success: false, 
@@ -190,11 +190,10 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-    // Normalize phone number
+   
     const normalizedPhone = phoneNumber.replace(/\D/g, '');
-    console.log('Normalized phone:', normalizedPhone);
+   
 
-    // Find user by phone number
     const user = await User.findOne({ phoneNumber: normalizedPhone });
     console.log('User found:', user ? 'Yes' : 'No');
     console.log('User details:', {
@@ -210,7 +209,7 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-    // Verify OTP (using 0000 for testing)
+   
     if (otp !== '0000') {
       return res.status(400).json({ 
         success: false, 
@@ -218,15 +217,15 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-    // Mark phone as verified
+ 
     user.isPhoneVerified = true;
     await user.save();
 
-    // Generate JWT token
+   
     const token = generateToken(user._id);
 
-    // Determine next step based on profile completion
-    let nextScreen = 'SelectGym'; // Default for new users
+    
+    let nextScreen = 'SelectGym'; 
     let stepDescription = '';
     let progressPercent = 0;
     
@@ -234,8 +233,7 @@ exports.verifyOTP = async (req, res) => {
     console.log('Profile completed:', user.profileCompleted);
     console.log('Current step:', user.currentStep);
     
-    // Check if profile is actually complete based on currentStep
-    // If currentStep is 9 or higher and all required fields exist, consider it complete
+   
     const hasAllRequiredFields = user.gymName && user.termsAccepted && 
                                   user.idDocument?.url && user.gymMembershipDocument?.url &&
                                   user.firstName && user.birthday && user.gender &&
@@ -244,11 +242,10 @@ exports.verifyOTP = async (req, res) => {
     
     const isActuallyComplete = user.profileCompleted || (user.currentStep >= 9 && hasAllRequiredFields);
     
-    console.log('Has all required fields:', hasAllRequiredFields);
-    console.log('Is actually complete:', isActuallyComplete);
+    
     
     if (isActuallyComplete) {
-      // Update profileCompleted flag if not already set
+   
       if (!user.profileCompleted && hasAllRequiredFields) {
         user.profileCompleted = true;
         user.currentStep = 11;
@@ -256,14 +253,14 @@ exports.verifyOTP = async (req, res) => {
         console.log('Updated user profileCompleted flag to true');
       }
       
-      nextScreen = 'Home'; // Completed users go to home
+      nextScreen = 'Home'; 
       progressPercent = 100;
       stepDescription = 'Profile completed';
       console.log('User has completed profile - going to Home');
     } else {
       progressPercent = Math.round((user.currentStep / 11) * 100);
       
-      // Determine where to continue based on currentStep
+     
       if (user.currentStep >= 11) {
         nextScreen = 'Home';
         stepDescription = 'Profile completed';
@@ -346,5 +343,50 @@ exports.getProfile = async (req, res) => {
       message: 'Failed to get profile', 
       error: error.message 
     });
+  }
+};
+
+
+exports.updatePlayerID = async (req, res) => {
+  try {
+    const { playerId } = req.body;
+    const userId = req.userId;
+
+    if (!playerId) {
+      return res.status(400).json({ success: false, message: 'Player ID is required' });
+    }
+
+    await User.findByIdAndUpdate(userId, { oneSignalPlayerId: playerId });
+
+    res.json({ success: true, message: 'Player ID updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update player ID' });
+  }
+};
+
+
+exports.testNotification = async (req, res) => {
+  try {
+    const { playerId } = req.body;
+    const userId = req.userId;
+
+    if (!playerId) {
+      return res.status(400).json({ success: false, message: 'Player ID is required' });
+    }
+
+    const { sendNotification } = require('../services/oneSignalService');
+    const result = await sendNotification(
+      playerId,
+      '🎉 Test Notification - OneSignal is working!',
+      { type: 'test', userId }
+    );
+
+    if (result.success) {
+      res.json({ success: true, message: 'Test notification sent successfully!' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to send test notification' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to send test notification' });
   }
 };
