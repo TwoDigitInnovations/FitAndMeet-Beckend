@@ -22,6 +22,7 @@ exports.getPotentialMatches = async (req, res) => {
       profileCompleted: true,
       isActive: true,
       isBlocked: false,
+      isDeleted: false,
       gender: currentUser.interestedIn === 'Every one' ? { $exists: true } : currentUser.interestedIn,
       photos: { $exists: true, $not: { $size: 0 } } 
     })
@@ -185,10 +186,18 @@ exports.likeProfile = async (req, res) => {
         );
 
         if (matchedUserDetails.oneSignalPlayerId) {
-          await sendMatchNotification(matchedUserDetails.oneSignalPlayerId, currentUser.firstName);
+          await sendMatchNotification(
+            matchedUserDetails.oneSignalPlayerId, 
+            currentUser.firstName,
+            matchedUserDetails.preferredLanguage || 'en'
+          );
         }
         if (currentUser.oneSignalPlayerId) {
-          await sendMatchNotification(currentUser.oneSignalPlayerId, matchedUserDetails.firstName);
+          await sendMatchNotification(
+            currentUser.oneSignalPlayerId, 
+            matchedUserDetails.firstName,
+            currentUser.preferredLanguage || 'en'
+          );
         }
       } else {
         await createNotification(
@@ -200,7 +209,11 @@ exports.likeProfile = async (req, res) => {
         );
 
         if (matchedUserDetails.oneSignalPlayerId) {
-          await sendLikeNotification(matchedUserDetails.oneSignalPlayerId, currentUser.firstName);
+          await sendLikeNotification(
+            matchedUserDetails.oneSignalPlayerId, 
+            currentUser.firstName,
+            matchedUserDetails.preferredLanguage || 'en'
+          );
         }
       }
     } catch (notifError) {
@@ -294,7 +307,7 @@ exports.getLikedProfiles = async (req, res) => {
     }).populate({
       path: 'user2',
       select: 'firstName age gender photos profileImage birthday',
-      match: { isActive: true, isBlocked: false }
+      match: { isActive: true, isBlocked: false, isDeleted: false }
     });
 
     console.log('Found liked matches:', likedMatches.length);
@@ -374,6 +387,7 @@ exports.getFilteredProfiles = async (req, res) => {
       profileCompleted: true,
       isActive: true,
       isBlocked: false,
+      isDeleted: false,
       gender: currentUser.interestedIn === 'Every one' ? { $exists: true } : currentUser.interestedIn,
       photos: { $exists: true, $not: { $size: 0 } }
     };

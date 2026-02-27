@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
 
     // Step 1: Gym Selection
     gymName: {
@@ -101,6 +105,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    preferredLanguage: {
+      type: String,
+      enum: ['en', 'fr'],
+      default: 'en',
+    },
     profileImage: {
       type: String,
       get: function() {
@@ -126,6 +135,14 @@ const userSchema = new mongoose.Schema(
     isBlocked: {
       type: Boolean,
       default: false,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

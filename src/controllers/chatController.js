@@ -189,12 +189,30 @@ const sendMessage = async (req, res) => {
     console.log('Sending message response with sender:', JSON.stringify(messageWithSender, null, 2));
 
     const recipientUser = await User.findById(recipient);
+    console.log('Recipient user:', {
+      id: recipientUser?._id,
+      name: recipientUser?.firstName,
+      hasPlayerId: !!recipientUser?.oneSignalPlayerId,
+      playerId: recipientUser?.oneSignalPlayerId,
+      language: recipientUser?.preferredLanguage
+    });
+
     if (recipientUser?.oneSignalPlayerId) {
-      await sendMessageNotification(
+      const senderImage = messageWithSender.sender?.photos?.[0]?.url || null;
+      console.log('Sending notification to:', recipientUser.firstName);
+      const notifResult = await sendMessageNotification(
         recipientUser.oneSignalPlayerId,
         messageWithSender.sender.firstName,
-        content
+        content,
+        conversation._id.toString(),
+        senderId.toString(),
+        senderImage,
+        null,
+        recipientUser.preferredLanguage || 'en'
       );
+      console.log('Notification result:', notifResult);
+    } else {
+      console.log('⚠️ Recipient has no OneSignal Player ID, notification not sent');
     }
 
     if (req.io) {
@@ -305,15 +323,40 @@ const sendMediaMessage = async (req, res) => {
     const messageWithSender = await Message.findById(message._id)
       .populate('sender', 'firstName photos');
 
-    // Emit socket event
     if (req.io) {
       req.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
+    }
+
+    const recipientUser = await User.findById(recipient);
+    console.log('Media message - Recipient user:', {
+      id: recipientUser?._id,
+      name: recipientUser?.firstName,
+      hasPlayerId: !!recipientUser?.oneSignalPlayerId,
+      playerId: recipientUser?.oneSignalPlayerId
+    });
+
+    if (recipientUser?.oneSignalPlayerId) {
+      const senderImage = messageWithSender.sender?.photos?.[0]?.url || null;
+      console.log('Sending media notification to:', recipientUser.firstName);
+      const notifResult = await sendMessageNotification(
+        recipientUser.oneSignalPlayerId,
+        messageWithSender.sender.firstName,
+        content,
+        conversation._id.toString(),
+        senderId.toString(),
+        senderImage,
+        mediaUrl,
+        recipientUser.preferredLanguage || 'en'
+      );
+      console.log('Media notification result:', notifResult);
+    } else {
+      console.log('⚠️ Recipient has no OneSignal Player ID for media, notification not sent');
     }
 
     res.json({
       success: true,
       message: messageWithSender,
-      mediaUrl: mediaUrl // Direct Cloudinary URL
+      mediaUrl: mediaUrl
     });
   } catch (error) {
     console.error('Error sending media message:', error);

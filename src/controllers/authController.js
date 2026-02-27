@@ -190,16 +190,15 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-   
     const normalizedPhone = phoneNumber.replace(/\D/g, '');
-   
 
     const user = await User.findOne({ phoneNumber: normalizedPhone });
     console.log('User found:', user ? 'Yes' : 'No');
     console.log('User details:', {
       id: user?._id,
       currentStep: user?.currentStep,
-      profileCompleted: user?.profileCompleted
+      profileCompleted: user?.profileCompleted,
+      isAdmin: user?.isAdmin
     });
 
     if (!user) {
@@ -209,23 +208,39 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-   
     if (otp !== '0000') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid OTP. Use 0000 for testing' 
-      });
+      if (otp === '1807' && normalizedPhone === '1234567890') {
+        console.log('Admin OTP detected');
+      } else {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid OTP. Use 0000 for testing' 
+        });
+      }
     }
 
- 
     user.isPhoneVerified = true;
     await user.save();
 
-   
     const token = generateToken(user._id);
 
-    
-    let nextScreen = 'SelectGym'; 
+    if (user.isAdmin) {
+      console.log('Admin user detected - redirecting to UserManagement');
+      return res.status(200).json({
+        success: true,
+        message: 'Admin login successful',
+        token,
+        user: {
+          id: user._id,
+          phoneNumber: user.phoneNumber,
+          isAdmin: true,
+        },
+        nextScreen: 'UserManagement',
+        isAdmin: true
+      });
+    }
+
+    let nextScreen = 'SelectGym';
     let stepDescription = '';
     let progressPercent = 0;
     
@@ -233,7 +248,6 @@ exports.verifyOTP = async (req, res) => {
     console.log('Profile completed:', user.profileCompleted);
     console.log('Current step:', user.currentStep);
     
-   
     const hasAllRequiredFields = user.gymName && user.termsAccepted && 
                                   user.idDocument?.url && user.gymMembershipDocument?.url &&
                                   user.firstName && user.birthday && user.gender &&
@@ -242,10 +256,7 @@ exports.verifyOTP = async (req, res) => {
     
     const isActuallyComplete = user.profileCompleted || (user.currentStep >= 9 && hasAllRequiredFields);
     
-    
-    
     if (isActuallyComplete) {
-   
       if (!user.profileCompleted && hasAllRequiredFields) {
         user.profileCompleted = true;
         user.currentStep = 11;
@@ -253,14 +264,13 @@ exports.verifyOTP = async (req, res) => {
         console.log('Updated user profileCompleted flag to true');
       }
       
-      nextScreen = 'Home'; 
+      nextScreen = 'Home';
       progressPercent = 100;
       stepDescription = 'Profile completed';
       console.log('User has completed profile - going to Home');
     } else {
       progressPercent = Math.round((user.currentStep / 11) * 100);
       
-     
       if (user.currentStep >= 11) {
         nextScreen = 'Home';
         stepDescription = 'Profile completed';
@@ -299,11 +309,13 @@ exports.verifyOTP = async (req, res) => {
         firstName: user.firstName,
         gymName: user.gymName,
         termsAccepted: user.termsAccepted,
+        isAdmin: user.isAdmin || false,
       },
       nextScreen,
       requiresRegistration: !isActuallyComplete,
       progressPercent,
-      stepDescription
+      stepDescription,
+      isAdmin: user.isAdmin || false
     };
 
     console.log('=== SENDING RESPONSE ===');
@@ -364,6 +376,22 @@ exports.updatePlayerID = async (req, res) => {
   }
 };
 
+exports.updateLanguage = async (req, res) => {
+  try {
+    const { preferredLanguage } = req.body;
+    const userId = req.userId;
+
+    if (!preferredLanguage || !['en', 'fr'].includes(preferredLanguage)) {
+      return res.status(400).json({ success: false, message: 'Valid language is required (en or fr)' });
+    }
+
+    await User.findByIdAndUpdate(userId, { preferredLanguage });
+
+    res.json({ success: true, message: 'Language updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update language' });
+  }
+};
 
 exports.testNotification = async (req, res) => {
   try {
@@ -388,5 +416,66 @@ exports.testNotification = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to send test notification' });
+  }
+};
+
+exports.createAdmin = async (req, res) => {
+  try {
+    const { phoneNumber, countryCode } = req.body;
+
+    if (!phoneNumber) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Phone number is required' 
+      });
+    }
+
+    const normalizedPhone = phoneNumber.replace(/\D/g, '');
+    
+    let user = await User.findOne({ phoneNumber: normalizedPhone });
+    
+    if (user) {
+      user.isAdmin = true;
+      user.isPhoneVerified = true;
+      await user.save();
+      
+      return res.status(200).json({
+        success: true,
+        message: 'User updated to admin',
+        user: {
+          id: user._id,
+          phoneNumber: user.phoneNumber,
+          isAdmin: user.isAdmin
+        }
+      });
+    }
+
+    user = new User({
+      phoneNumber: normalizedPhone,
+      countryCode: countryCode || '+91',
+      isAdmin: true,
+      isPhoneVerified: true,
+      profileCompleted: true,
+      currentStep: 11
+    });
+    
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin user created successfully',
+      user: {
+        id: user._id,
+        phoneNumber: user.phoneNumber,
+        isAdmin: user.isAdmin
+      }
+    });
+  } catch (error) {
+    console.error('Create admin error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create admin', 
+      error: error.message 
+    });
   }
 };

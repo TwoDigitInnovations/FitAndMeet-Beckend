@@ -7,7 +7,9 @@ const authMiddleware = require('../middlewares/authMiddleware');
 router.post('/send-otp', authController.sendOTP);
 router.post('/verify-otp', authController.verifyOTP);
 router.post('/update-player-id', authMiddleware, authController.updatePlayerID);
+router.put('/update-language', authMiddleware, authController.updateLanguage);
 router.post('/test-notification', authMiddleware, authController.testNotification);
+router.post('/create-admin', authController.createAdmin);
 
 router.get('/profile', authMiddleware, authController.getProfile);
 
