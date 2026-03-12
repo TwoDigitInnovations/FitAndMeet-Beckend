@@ -130,9 +130,6 @@ const sendMessage = async (req, res) => {
     const { conversationId, content, type = 'text', recipientId } = req.body;
     const senderId = req.user._id;
 
-    const { conversationId, content, type = 'text', recipientId } = req.body;
-    const senderId = req.user._id;
-
     // Find or create conversation
     let conversation;
     if (conversationId) {
