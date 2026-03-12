@@ -130,6 +130,9 @@ const sendMessage = async (req, res) => {
     const { conversationId, content, type = 'text', recipientId } = req.body;
     const senderId = req.user._id;
 
+    const { conversationId, content, type = 'text', recipientId } = req.body;
+    const senderId = req.user._id;
+
     // Find or create conversation
     let conversation;
     if (conversationId) {
@@ -186,20 +189,10 @@ const sendMessage = async (req, res) => {
     const messageWithSender = await Message.findById(message._id)
       .populate('sender', 'firstName photos');
 
-    console.log('Sending message response with sender:', JSON.stringify(messageWithSender, null, 2));
-
     const recipientUser = await User.findById(recipient);
-    console.log('Recipient user:', {
-      id: recipientUser?._id,
-      name: recipientUser?.firstName,
-      hasPlayerId: !!recipientUser?.oneSignalPlayerId,
-      playerId: recipientUser?.oneSignalPlayerId,
-      language: recipientUser?.preferredLanguage
-    });
 
     if (recipientUser?.oneSignalPlayerId) {
       const senderImage = messageWithSender.sender?.photos?.[0]?.url || null;
-      console.log('Sending notification to:', recipientUser.firstName);
       const notifResult = await sendMessageNotification(
         recipientUser.oneSignalPlayerId,
         messageWithSender.sender.firstName,
@@ -210,13 +203,12 @@ const sendMessage = async (req, res) => {
         null,
         recipientUser.preferredLanguage || 'en'
       );
-      console.log('Notification result:', notifResult);
-    } else {
-      console.log('⚠️ Recipient has no OneSignal Player ID, notification not sent');
     }
 
     if (req.io) {
       req.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
+    } else if (global.io) {
+      global.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
     }
 
     res.json({
@@ -325,6 +317,8 @@ const sendMediaMessage = async (req, res) => {
 
     if (req.io) {
       req.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
+    } else if (global.io) {
+      global.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
     }
 
     const recipientUser = await User.findById(recipient);
@@ -374,7 +368,7 @@ const markAsRead = async (req, res) => {
     const { conversationId } = req.params;
     const userId = req.user._id;
 
-    await Message.updateMany(
+    const result = await Message.updateMany(
       {
         conversation: conversationId,
         recipient: userId,
@@ -385,6 +379,13 @@ const markAsRead = async (req, res) => {
         readAt: new Date()
       }
     );
+
+    if (result.modifiedCount > 0 && req.io) {
+      req.io.to(`conversation_${conversationId}`).emit('messages-read', {
+        conversationId,
+        readBy: userId
+      });
+    }
 
     res.json({
       success: true,

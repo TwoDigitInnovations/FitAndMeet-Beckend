@@ -7,10 +7,10 @@ const SocketService = require('./services/socketService')
 
 const PORT = process.env.PORT || 5000
 
-
+// Create server
 const server = http.createServer(app)
 
-
+// Initialize Socket.IO
 const io = socketIo(server, {
   cors: {
     origin: "*",
@@ -18,10 +18,14 @@ const io = socketIo(server, {
   }
 })
 
-
+// Initialize socket service
 const socketService = new SocketService(io)
 
+// Make io and socketService available globally
+global.io = io;
+global.socketService = socketService;
 
+// Add middleware to make io available in requests
 app.use((req, res, next) => {
   req.io = io
   req.socketService = socketService
