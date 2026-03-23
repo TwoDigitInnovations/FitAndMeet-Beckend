@@ -67,6 +67,14 @@ const sendMessageNotification = async (recipientPlayerId, senderName, messageTex
   const message = translations.message[recipientLanguage](senderName, displayText);
   const imageToShow = messageImage || senderImage;
   
+  console.log('Sending notification with data:', {
+    type: 'message',
+    senderName,
+    conversationId,
+    senderId,
+    senderImage
+  });
+  
   return sendNotification(
     recipientPlayerId,
     message,

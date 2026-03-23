@@ -15,7 +15,7 @@ router.get('/messages/:conversationId', chatController.getMessages);
 router.post('/send-message', chatController.sendMessage);
 
 
-router.post('/send-media', chatController.sendMediaMessage);
+router.post('/send-media', ...chatController.sendMediaMessage);
 
 
 router.put('/mark-read/:conversationId', chatController.markAsRead);

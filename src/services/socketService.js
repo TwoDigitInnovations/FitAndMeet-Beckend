@@ -65,6 +65,8 @@ class SocketService {
     // Handle joining conversation rooms
     socket.on('join-conversation', async (conversationId) => {
       try {
+        console.log(`User ${userId} attempting to join conversation ${conversationId}`);
+        
         // Verify user is part of this conversation
         const conversation = await Conversation.findOne({
           _id: conversationId,
@@ -73,10 +75,17 @@ class SocketService {
 
         if (conversation) {
           socket.join(`conversation_${conversationId}`);
-          console.log(`User ${userId} joined conversation ${conversationId}`);
+          console.log(`✅ User ${userId} successfully joined conversation ${conversationId}`);
+          
+          // Confirm room join to client
+          socket.emit('conversation-joined', { conversationId });
+        } else {
+          console.log(`❌ User ${userId} not authorized for conversation ${conversationId}`);
+          socket.emit('error', { message: 'Not authorized for this conversation' });
         }
       } catch (error) {
         console.error('Error joining conversation:', error);
+        socket.emit('error', { message: 'Failed to join conversation' });
       }
     });
 

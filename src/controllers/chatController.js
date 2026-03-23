@@ -203,8 +203,10 @@ const sendMessage = async (req, res) => {
     }
 
     if (req.io) {
+      console.log(`Emitting new message to conversation_${conversation._id}`);
       req.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
     } else if (global.io) {
+      console.log(`Emitting new message to conversation_${conversation._id} via global.io`);
       global.io.to(`conversation_${conversation._id}`).emit('new-message', messageWithSender);
     }
 
