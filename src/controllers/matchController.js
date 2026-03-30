@@ -46,6 +46,12 @@ exports.getPotentialMatches = async (req, res) => {
       
       let distance = Math.floor(Math.random() * 10) + 1; 
       
+      // Safely get photo URL with null checks
+      let photoUrl = null;
+      if (match.photos && match.photos.length > 0 && match.photos[0] && match.photos[0].url) {
+        photoUrl = match.photos[0].url;
+      }
+      
       return {
         id: match._id,
         name: match.firstName,
@@ -53,7 +59,7 @@ exports.getPotentialMatches = async (req, res) => {
         distance: `${distance} km away`,
         gym: match.gymName || 'Gym Training',
         gender: match.gender,
-        image: match.photos && match.photos.length > 0 ? match.photos[0].url : null,
+        image: photoUrl,
         activities: match.interests && match.interests.length > 0 ? match.interests : ['Fitness', 'Gym Training'],
         verified: true 
       };
@@ -420,11 +426,17 @@ exports.getFilteredProfiles = async (req, res) => {
       const daysSinceJoined = Math.floor((Date.now() - new Date(profile.createdAt)) / (1000 * 60 * 60 * 24));
       const timeLeft = daysSinceJoined < 7 ? `${daysSinceJoined}d left` : '';
 
+      // Safely get photo URL with null checks
+      let photoUrl = null;
+      if (profile.photos && profile.photos.length > 0 && profile.photos[0] && profile.photos[0].url) {
+        photoUrl = profile.photos[0].url;
+      }
+
       return {
         id: profile._id,
         name: profile.firstName,
         age: calculatedAge || 25,
-        image: profile.photos && profile.photos.length > 0 ? profile.photos[0].url : null,
+        image: photoUrl,
         isVerified: true,
         timeLeft: timeLeft
       };
