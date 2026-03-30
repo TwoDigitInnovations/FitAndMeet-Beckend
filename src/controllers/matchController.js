@@ -117,6 +117,15 @@ exports.likeProfile = async (req, res) => {
       const matchedUserDetails = await User.findById(likedUserId)
         .select('firstName age photos profileImage');
 
+      // Helper function to safely get photo URL
+      const getPhotoUrl = (user) => {
+        if (user.profileImage) return user.profileImage;
+        if (user.photos && user.photos.length > 0 && user.photos[0] && user.photos[0].url) {
+          return user.photos[0].url;
+        }
+        return null;
+      };
+
       return res.status(200).json({
         success: true,
         isMatch: existingLike.status === 'matched',
@@ -125,13 +134,13 @@ exports.likeProfile = async (req, res) => {
           id: currentUser._id,
           name: currentUser.firstName,
           age: currentUser.age,
-          profileImage: currentUser.profileImage || (currentUser.photos && currentUser.photos.length > 0 ? currentUser.photos[0].url : null)
+          profileImage: getPhotoUrl(currentUser)
         },
         matchedUser: {
           id: matchedUserDetails._id,
           name: matchedUserDetails.firstName,
           age: matchedUserDetails.age,
-          profileImage: matchedUserDetails.profileImage || (matchedUserDetails.photos && matchedUserDetails.photos.length > 0 ? matchedUserDetails.photos[0].url : null)
+          profileImage: getPhotoUrl(matchedUserDetails)
         }
       });
     }
@@ -228,6 +237,15 @@ exports.likeProfile = async (req, res) => {
 
     console.log('Sending response:', { isMatch, currentUser: currentUser?.firstName, matchedUser: matchedUserDetails?.firstName });
 
+    // Helper function to safely get photo URL
+    const getPhotoUrl = (user) => {
+      if (user.profileImage) return user.profileImage;
+      if (user.photos && user.photos.length > 0 && user.photos[0] && user.photos[0].url) {
+        return user.photos[0].url;
+      }
+      return null;
+    };
+
     res.status(200).json({
       success: true,
       isMatch,
@@ -236,13 +254,13 @@ exports.likeProfile = async (req, res) => {
         id: currentUser._id,
         name: currentUser.firstName,
         age: currentUser.age,
-        profileImage: currentUser.profileImage || (currentUser.photos && currentUser.photos.length > 0 ? currentUser.photos[0].url : null)
+        profileImage: getPhotoUrl(currentUser)
       },
       matchedUser: {
         id: matchedUserDetails._id,
         name: matchedUserDetails.firstName,
         age: matchedUserDetails.age,
-        profileImage: matchedUserDetails.profileImage || (matchedUserDetails.photos && matchedUserDetails.photos.length > 0 ? matchedUserDetails.photos[0].url : null)
+        profileImage: getPhotoUrl(matchedUserDetails)
       }
     });
 
@@ -339,12 +357,20 @@ exports.getLikedProfiles = async (req, res) => {
         // Generate random time left (for UI purposes)
         const timeLeft = Math.floor(Math.random() * 5) + 1;
         
+        // Safely get photo URL
+        let photoUrl = null;
+        if (user.profileImage) {
+          photoUrl = user.profileImage;
+        } else if (user.photos && user.photos.length > 0 && user.photos[0] && user.photos[0].url) {
+          photoUrl = user.photos[0].url;
+        }
+
         return {
           id: user._id,
           name: user.firstName,
           age: calculatedAge || 25,
           timeLeft: `${timeLeft} hrs left`,
-          image: user.profileImage || (user.photos && user.photos.length > 0 ? user.photos[0].url : null),
+          image: photoUrl,
           isVerified: true,
           likedAt: match.likedAt,
           status: match.status
