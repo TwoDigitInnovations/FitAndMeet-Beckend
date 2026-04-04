@@ -50,7 +50,7 @@ class SocketService {
 
   handleConnection(socket) {
     const userId = socket.userId;
-    console.log(`User ${userId} connected with socket ${socket.id}`);
+    // console.log(`User ${userId} connected with socket ${socket.id}`);
 
     // Store user connection
     this.connectedUsers.set(userId, socket.id);
@@ -65,7 +65,7 @@ class SocketService {
     // Handle joining conversation rooms
     socket.on('join-conversation', async (conversationId) => {
       try {
-        console.log(`User ${userId} attempting to join conversation ${conversationId}`);
+        // console.log(`User ${userId} attempting to join conversation ${conversationId}`);
         
         // Verify user is part of this conversation
         const conversation = await Conversation.findOne({
@@ -75,7 +75,7 @@ class SocketService {
 
         if (conversation) {
           socket.join(`conversation_${conversationId}`);
-          console.log(`✅ User ${userId} successfully joined conversation ${conversationId}`);
+          // console.log(`✅ User ${userId} successfully joined conversation ${conversationId}`);
           
           // Confirm room join to client
           socket.emit('conversation-joined', { conversationId });
