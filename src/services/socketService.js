@@ -7,7 +7,7 @@ class SocketService {
   constructor(io) {
     this.io = io;
     this.connectedUsers = new Map(); // userId -> socketId
-    this.userSockets = new Map(); // socketId -> userId
+    this.userSockets = new Map(); 
     
     this.setupSocketHandlers();
   }
